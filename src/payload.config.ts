@@ -10,10 +10,8 @@ import nodemailerSendgrid from "nodemailer-sendgrid";
 
 import { Users } from "./collections/Users";
 import { Media } from "./collections/Media";
-import { Categories } from "./collections/Categories";
 import { Ideas } from "./collections/Ideas";
 import { Policies } from "./collections/Policies";
-import { Products } from "./collections/Products";
 import { Orders } from "./collections/Orders";
 
 import { s3Storage } from "@payloadcms/storage-s3";
