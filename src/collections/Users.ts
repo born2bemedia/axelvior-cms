@@ -1,23 +1,37 @@
-import type { CollectionConfig, PayloadRequest } from 'payload'
+import type { CollectionConfig, PayloadRequest } from "payload";
 
 export const Users: CollectionConfig = {
-  slug: 'users',
+  slug: "users",
   admin: {
-    useAsTitle: 'email',
+    useAsTitle: "email",
   },
   auth: {
     forgotPassword: {
       generateEmailHTML: (args?: { token?: string }) => {
-        const resetLink = `${process.env.WEB_FRONT_URL}/forgot-password?token=${args?.token}`
+        const resetLink = `${process.env.WEB_FRONT_URL}/set-password?token=${args?.token}`;
 
         return `
-          <div style="font-family: sans-serif; line-height: 1.5;">
-            <h2>Password Reset Request</h2>
-            <p>You requested a password reset. Click the button below to reset your password.</p>
-            <p><a href="${resetLink}" style="display: inline-block; background-color: white; color: black; padding: 16px 24px; text-decoration: none; border: 1px solid black;">Reset Password</a></p>
-            <p>If you didn’t request this, just ignore this email.</p>
+          <div style="background-color: white;font-family: sans-serif; line-height: 1.5;width:640px;margin:0 auto;">
+            <img src="${process.env.WEB_FRONT_URL}/images/email-header.png" alt="Axelvior Logo" style="width: 100px; height: 100px;" />
+            <div style="padding: 32px;">
+              <h2 style="color: #333;font-size: 24px;font-style: normal;font-weight: 400;line-height: 140%;">Password Reset Request</h2>
+              <p style="margin-bottom: 32px;color: #333;font-size: 16px;font-style: normal;font-weight: 400;line-height: 140%;">You requested a password reset. Click the button below to reset your password.</p>
+              <p><a href="${resetLink}" style="color: #FFF;
+font-size: 16px;
+font-style: normal;
+font-weight: 400;
+line-height: 140%;
+padding: 10px 16px 10px 16px;
+border-radius: 4px;
+background: #384CE3;
+text-decoration: none;
+">
+>Reset Password</a></p>
+              <p style="margin-top: 32px;color: #333;font-size: 16px;font-style: normal;font-weight: 400;line-height: 140%;">If you didn’t request this, just ignore this email.</p>
+            </div>
+            <img src="${process.env.WEB_FRONT_URL}/images/email-footer.png" alt="Axelvior Logo" style="width: 100px; height: 100px;" />
           </div>
-        `
+        `;
       },
     },
   },
@@ -31,74 +45,74 @@ export const Users: CollectionConfig = {
   },
   fields: [
     {
-      name: 'firstName',
-      type: 'text',
-      label: 'First Name',
+      name: "firstName",
+      type: "text",
+      label: "First Name",
       required: true,
     },
     {
-      name: 'lastName',
-      type: 'text',
-      label: 'Last Name',
+      name: "lastName",
+      type: "text",
+      label: "Last Name",
       required: true,
     },
     {
-      name: 'username',
-      type: 'text',
-      label: 'Username',
+      name: "username",
+      type: "text",
+      label: "Username",
       required: false,
     },
     {
-      name: 'phone',
-      type: 'text',
-      label: 'Phone',
+      name: "phone",
+      type: "text",
+      label: "Phone",
       required: false,
     },
     {
-      name: 'address1',
-      type: 'text',
-      label: 'Address line 1',
+      name: "address1",
+      type: "text",
+      label: "Address line 1",
       required: false,
     },
     {
-      name: 'address2',
-      type: 'textarea',
-      label: 'Address line 2',
+      name: "address2",
+      type: "textarea",
+      label: "Address line 2",
       required: false,
     },
     {
-      name: 'city',
-      type: 'text',
-      label: 'City',
+      name: "city",
+      type: "text",
+      label: "City",
       required: false,
     },
     {
-      name: 'state',
-      type: 'text',
-      label: 'State',
+      name: "state",
+      type: "text",
+      label: "State",
       required: false,
     },
     {
-      name: 'zip',
-      type: 'text',
-      label: 'Zip Code',
+      name: "zip",
+      type: "text",
+      label: "Zip Code",
       required: false,
     },
     {
-      name: 'country',
-      type: 'text',
-      label: 'Country',
+      name: "country",
+      type: "text",
+      label: "Country",
       required: false,
     },
     {
-      name: 'role',
-      type: 'select',
+      name: "role",
+      type: "select",
       options: [
-        { label: 'Admin', value: 'admin' },
-        { label: 'Customer', value: 'customer' },
+        { label: "Admin", value: "admin" },
+        { label: "Customer", value: "customer" },
       ],
-      defaultValue: 'customer',
+      defaultValue: "customer",
       required: true,
     },
   ],
-}
+};
