@@ -117,20 +117,28 @@ export async function translateTextAndObjects(
     return targetDoc;
   }
 
-  // Translate all texts using DeepL
+  // Translate all texts using DeepL, preserving leading/trailing whitespace
   try {
-    const texts = Object.values(textsToTranslate);
+    const textPaths = Object.keys(textsToTranslate);
+    const originals = Object.values(textsToTranslate);
+    const whitespace = originals.map((t) => ({
+      leading: t.match(/^\s*/)?.[0] || "",
+      trailing: t.match(/\s*$/)?.[0] || "",
+    }));
+    const trimmed = originals.map((t) => t.trim());
+
     const translatedTexts = await deeplService.translateBatch(
-      texts,
+      trimmed,
       targetLanguage,
       sourceLanguage,
       settings,
     );
 
-    // Map translated texts back to their paths
-    const textPaths = Object.keys(textsToTranslate);
     textPaths.forEach((path, index) => {
-      textMap[path] = translatedTexts[index];
+      textMap[path] =
+        whitespace[index].leading +
+        translatedTexts[index].trim() +
+        whitespace[index].trailing;
     });
   } catch (error) {
     console.error("Translation failed:", error);

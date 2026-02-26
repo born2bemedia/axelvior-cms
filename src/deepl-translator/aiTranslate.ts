@@ -2,8 +2,162 @@ import type { CollectionOptions, DeepLTranslationSettings } from "./types";
 import { DeepLService } from "./deeplService";
 import { translateTextAndObjects } from "./translateTextAndObjects";
 
+// Lexical format bits → HTML tag names
+const FORMAT_BIT_TO_TAG: [number, string][] = [
+  [1, "b"],
+  [2, "i"],
+  [4, "s"],
+  [8, "u"],
+];
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function unescapeHtml(text: string): string {
+  return text
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
+}
+
+function wrapWithFormatTags(text: string, format: number): string {
+  let result = escapeHtml(text);
+  for (const [bit, tag] of FORMAT_BIT_TO_TAG) {
+    if (format & bit) result = `<${tag}>${result}</${tag}>`;
+  }
+  return result;
+}
+
+interface TextSegment {
+  text: string;
+  format: number;
+}
+
+function parseTranslatedHtml(html: string): TextSegment[] {
+  const segments: TextSegment[] = [];
+  let activeFormat = 0;
+  let pos = 0;
+
+  const tagPattern = /<\/?(b|i|s|u|code|sub|sup|br)\s*\/?>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = tagPattern.exec(html)) !== null) {
+    if (match.index > pos) {
+      const text = unescapeHtml(html.slice(pos, match.index));
+      if (text) segments.push({ text, format: activeFormat });
+    }
+
+    const tag = match[0];
+    const tagName = match[1].toLowerCase();
+
+    if (tagName === "br") {
+      segments.push({ text: "\n", format: 0 });
+    } else {
+      const bit =
+        tagName === "b"
+          ? 1
+          : tagName === "i"
+            ? 2
+            : tagName === "s"
+              ? 4
+              : tagName === "u"
+                ? 8
+                : 0;
+      if (tag.startsWith("</")) {
+        activeFormat &= ~bit;
+      } else {
+        activeFormat |= bit;
+      }
+    }
+
+    pos = tagPattern.lastIndex;
+  }
+
+  if (pos < html.length) {
+    const text = unescapeHtml(html.slice(pos));
+    if (text) segments.push({ text, format: activeFormat });
+  }
+
+  return segments;
+}
+
+function isTextLeaf(node: any): boolean {
+  return typeof node.text === "string" || node.type === "linebreak";
+}
+
 /**
- * Process RichText nodes recursively for translation
+ * Translate a consecutive run of text-leaf nodes as a single HTML string
+ * and splice the result back into the children array.
+ * Returns the number of new nodes that replaced the original group.
+ */
+async function translateTextGroupAsHtml(
+  children: any[],
+  start: number,
+  end: number,
+  deeplService: DeepLService,
+  targetLanguage: string,
+  sourceLanguage: string,
+  settings: DeepLTranslationSettings,
+): Promise<number> {
+  let html = "";
+  for (let idx = start; idx < end; idx++) {
+    const child = children[idx];
+    if (typeof child.text === "string") {
+      html += wrapWithFormatTags(child.text, child.format || 0);
+    } else if (child.type === "linebreak") {
+      html += "<br/>";
+    }
+  }
+
+  if (!html.trim()) return end - start;
+
+  const translatedHtml = await deeplService.translateText(
+    html,
+    targetLanguage,
+    sourceLanguage,
+    { ...settings, tagHandling: "html" },
+  );
+
+  const segments = parseTranslatedHtml(translatedHtml);
+  if (segments.length === 0) return end - start;
+
+  const template =
+    children.slice(start, end).find((c: any) => typeof c.text === "string") ||
+    {};
+
+  const newNodes: any[] = [];
+  for (const seg of segments) {
+    if (seg.text === "\n") {
+      newNodes.push({ type: "linebreak", version: 1 });
+    } else {
+      newNodes.push({
+        detail: template.detail ?? 0,
+        mode: template.mode ?? "normal",
+        style: template.style ?? "",
+        type: "text",
+        version: template.version ?? 1,
+        text: seg.text,
+        format: seg.format,
+      });
+    }
+  }
+
+  children.splice(start, end - start, ...newNodes);
+  return newNodes.length;
+}
+
+/**
+ * Process RichText nodes recursively for translation.
+ *
+ * Children of each node are scanned left-to-right. Consecutive text leaves
+ * are grouped together and translated as a single HTML string so DeepL sees
+ * the full sentence context and preserves whitespace around inline formatting
+ * (bold, italic, …). Non-text children (links, nested blocks, etc.) act as
+ * group boundaries and are processed recursively.
  */
 async function processRichTextNode(
   node: any,
@@ -13,33 +167,47 @@ async function processRichTextNode(
   settings: DeepLTranslationSettings,
 ): Promise<void> {
   try {
-    // Handle text nodes
-    if (node.type === "text" && node.text && node.text.trim()) {
-      try {
-        const translatedText = await deeplService.translateText(
-          node.text,
-          targetLanguage,
-          sourceLanguage,
-          settings,
-        );
-        node.text = translatedText;
-      } catch (error) {
-        console.error(`Failed to translate text: "${node.text}"`, error);
+    if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+      let i = 0;
+      while (i < node.children.length) {
+        if (isTextLeaf(node.children[i])) {
+          const start = i;
+          while (i < node.children.length && isTextLeaf(node.children[i])) i++;
+          const newGroupLen = await translateTextGroupAsHtml(
+            node.children,
+            start,
+            i,
+            deeplService,
+            targetLanguage,
+            sourceLanguage,
+            settings,
+          );
+          i = start + newGroupLen;
+        } else {
+          await processRichTextNode(
+            node.children[i],
+            deeplService,
+            targetLanguage,
+            sourceLanguage,
+            settings,
+          );
+          i++;
+        }
       }
       return;
     }
 
-    // Handle nodes with children
-    if (node.children && Array.isArray(node.children)) {
-      for (const childNode of node.children) {
-        await processRichTextNode(
-          childNode,
-          deeplService,
-          targetLanguage,
-          sourceLanguage,
-          settings,
-        );
-      }
+    // Standalone text node fallback — preserve leading/trailing whitespace
+    if (typeof node.text === "string" && node.text.trim()) {
+      const leadingWS = node.text.match(/^\s*/)?.[0] || "";
+      const trailingWS = node.text.match(/\s*$/)?.[0] || "";
+      const translated = await deeplService.translateText(
+        node.text.trim(),
+        targetLanguage,
+        sourceLanguage,
+        settings,
+      );
+      node.text = leadingWS + translated.trim() + trailingWS;
     }
   } catch (error) {
     console.error("Error processing richText node:", error);
