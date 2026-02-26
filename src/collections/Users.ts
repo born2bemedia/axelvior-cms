@@ -25,8 +25,7 @@ padding: 10px 16px 10px 16px;
 border-radius: 4px;
 background: #384CE3;
 text-decoration: none;
-">
->Reset Password</a></p>
+">Reset Password</a></p>
               <p style="margin-top: 32px;color: #333;font-size: 16px;font-style: normal;font-weight: 400;line-height: 140%;">If you didn’t request this, just ignore this email.</p>
             </div>
             <img src="${process.env.WEB_FRONT_URL}/images/email-footer.png" alt="Axelvior Logo" style="width: 100px; height: 100px;" />
