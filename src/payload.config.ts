@@ -36,7 +36,7 @@ export default buildConfig({
     outputFile: path.resolve(dirname, "payload-types.ts"),
   },
   localization: {
-    locales: ["en", "de", "it", "el"],
+    locales: ["en", "de", "it"],
     defaultLocale: "en",
   },
   cors: {
@@ -68,7 +68,7 @@ export default buildConfig({
     }),
     deeplTranslatorPlugin({
       enabled: true,
-      fallbackLocales: ["de", "it", "el"],
+      fallbackLocales: ["de", "it"],
       collections: {
         policies: {
           fields: ["title", "content"],
