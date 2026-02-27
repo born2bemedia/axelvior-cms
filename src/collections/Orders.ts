@@ -128,6 +128,16 @@ export const Orders: CollectionConfig = {
         position: "sidebar",
       },
     },
+    {
+      name: "deliverables",
+      type: "upload",
+      relationTo: "media",
+      label: "Deliverables",
+      required: false,
+      admin: {
+        position: "sidebar",
+      },
+    },
   ],
   hooks: {
     beforeChange: [

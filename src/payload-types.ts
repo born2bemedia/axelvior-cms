@@ -96,7 +96,7 @@ export interface Config {
   globalsSelect: {
     'deepl-translator-config': DeeplTranslatorConfigSelect<false> | DeeplTranslatorConfigSelect<true>;
   };
-  locale: 'en' | 'de' | 'it';
+  locale: 'en' | 'de' | 'it' | 'bg';
   user: User & {
     collection: 'users';
   };
@@ -160,6 +160,7 @@ export interface Order {
   };
   createdAt: string;
   invoice?: (number | null) | Media;
+  deliverables?: (number | null) | Media;
   updatedAt: string;
 }
 /**
@@ -396,6 +397,7 @@ export interface OrdersSelect<T extends boolean = true> {
       };
   createdAt?: T;
   invoice?: T;
+  deliverables?: T;
   updatedAt?: T;
 }
 /**
